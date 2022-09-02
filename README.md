@@ -60,7 +60,7 @@ reveal the correct serial port to use. In this case, `COM6`.
 ### Connection to Pulser
 
 ```python
-my_pulser = qcsapphire.Pulser('COM6')
+pulser = qcsapphire.Pulser('COM6')
 ```
 
 ### Communication
@@ -73,17 +73,17 @@ check for errors (raising an Exception when an error is found) and return the st
 response. For example,
 
 ```python
-ret_val = my_pulser.query(':PULSE0:STATE?')
+ret_val = pulser.query(':PULSE0:STATE?')
 print(ret_val)
 '0'
 ```
 
 ```python
-ret_val = my_pulser.query(':PULSE1:WIDTH 0.000025')
+ret_val = pulser.query(':PULSE1:WIDTH 0.000025')
 print(ret_val)
 'ok'
 
-ret_val = my_pulser.query(':PULSE1:WIDTH?')
+ret_val = pulser.query(':PULSE1:WIDTH?')
 print(ret_val)
 '0.000025000'
 ```
@@ -91,16 +91,16 @@ print(ret_val)
 #### Property-Like Calls
 
 It's possible to make the same calls to the pulser using a property-like call.
-Instead of calling `my_pulser.query("command1:subcommand:subsubcommand value")`,
-one can call `my_pulser.command1.subcommand.subsubcommand(value)`, which is more readable.
+Instead of calling `pulser.query("command1:subcommand:subsubcommand value")`,
+one can call `pulser.command1.subcommand.subsubcommand(value)`, which is more readable.
 
 For example,
 
 ```python
-ret_val = my_pulser.pulse1.width(0.000025) #sets the width of channel A
+ret_val = pulser.pulse1.width(0.000025) #sets the width of channel A
 print(ret_val) # 'ok'
 
-width = my_pulser.pulse1.width() #asks for the width of channel A
+width = pulser.pulse1.width() #asks for the width of channel A
 print(width) # '0.000025000'
 ```
 
@@ -112,6 +112,16 @@ for sending the correct command strings by following
 It should be pointed out there is no need to worry about string encoding and carriage returns / line feeds,
 as that is taken care of by the code.
 
+#### Programming Channels
+
+Instead of using 'pulseN' to access a particular QCSapphire channel, methods have
+been added to facilitate more programmatic ways of control.
+
+```
+
+```
+
+
 ### Global and Channel States
 
 Two methods exist to report on global and channel settings
@@ -122,7 +132,7 @@ Two methods exist to report on global and channel settings
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
-pp.pprint(my_pulser.report_global_settings())
+pp.pprint(pulser.report_global_settings())
 ```
 
 ##### Channel Settings
@@ -130,7 +140,7 @@ pp.pprint(my_pulser.report_global_settings())
 ```python
 for channel in range(1,5):
     pp.pprint(f'channel {channel}')
-    pp.pprint(my_pulser.report_channel_settings(channel))
+    pp.pprint(pulser.report_channel_settings(channel))
 ```
 
 ### Examples
@@ -138,45 +148,176 @@ for channel in range(1,5):
 After reading the documentation for the device, you'll notice there
 are four output channels (A, B, C and D) and an internal global system.
 
-The internal global system is referenced as `:PULSE0` (or `my_pulser.pulse0`).
+The internal global system is referenced as `:PULSE0` (or `pulser.pulse0`).
 To the output channels are references as (A = `pulse1`, B = `pulse2'`, C = `pulse3`,
 and D = `pulse4`).
 
 
-#### Continuous Pulse on Channel A
+#### Resets
+
+The QCSapphire can be unstable at times. We have found that forcing the
+system to reset, multiple times, is necessary to program the pulser the
+the ways described below. You may or may-not have better stability
+if you reset the pulser before programming.
+
 
 ```python
-import qcsapphire
+for i in range(2):
+      pulser.set_all_state_off()
+      time.sleep(1)
+pulser.query('*RST')
+pulser.system.mode('normal')
+```
 
-my_pulser = qcsapphire.Pulser('COM6')
+#### CWODMR
 
-my_pulser.pulse0.mode('normal')
-my_pulser.pulse0.period(1.00) #1 second period on internal trigger
-my_pulser.pulse0.external.mode('disabled')
-my_pulser.pulse1.cmode('normal')
-my_pulser.pulse1.polarity('normal')
-my_pulser.pulse1.width(0.05) #50 ms wide pulse
+In CWODMR our spin system is continuously illuminated with an optical pump,
+while an oscillating (RF) magnetic field drives magnetic transitions between
+spin states. While the optical pump is continuously on, we can use the QCSapphire
+to control the RF magnetic signal timing. The RF signal hardware will control
+the frequency of the field (for NV centers, between 2.6 and 3.2 GHz, depending on
+the level of Zeeman splitting). The QCSapphire's TTL output may operate a
+switch that blocks the RF signal at known times. This allows the experimenter
+to acquire photo luminescence (PL) signal for periods when no RF signal is applied
+in order to measure a background, and to then measure PL when the RF is applied.
 
-#don't turn on yet
-my_pulser.pulse1.state(0)
-my_pulser.pulse0.state(0)
+In this case, we wish to program the QCSapphire to output a TTL signal of fixed
+duration and period. The following example shows how to program the QCSapphire
+to output a 5 microsecond on/off TTL signal.
 
-#turn on Pulser
-my_pulser.pulse0.state(1) #turns on internal signal (pulse0)
-my_pulser.pulse1.state(1) #turns on channel A (A = pulse1, B = pulse2, C = pulse3, D = pulse4)
+##### Simple Example: Single Channel
+
+In the simple case, we just have a single channel ('B') that we wish to use to
+generate a square wave. The documentation is straight-forward here. NB: channel
+'B' is demonstrated here because we use channel 'A' to control the optical
+pumping in other experiments (pulsed-ODMR, Rabi, etc.).
+
+```python
+total_width = 10e-6 #in seconds
+pulser.system.period(total_width)
+
+#use channel B for RF switch and use 'normal' mode
+channel = pulser.channel('B')
+channel.mode('normal')
+
+#create a 5 microsecond pulse
+#round to nearest 10ns bc QCSapphire does not behave well with machine errors
+channel.width(np.round(total_width/2, 8))
+channel.delay(0)
+
+pulser.system.state(1) #start the pulser
+```
+
+##### Realistic Example: Adding Clock and Trigger Channels
+
+In order to take robust data, however, we need to control our data acquisition
+system (DAQ). Supplying an external clock and trigger signal from the QCSapphire ensures
+that the DAQ and pulser do not drift from each other and data is acquired at the
+exact moment the system is ready.
+
+However, this changes how we must program the RF on/off to be 5 microseconds in
+width. The following steps through the necessary calls to produce a
+
+  * 200 ns clock period
+  * 5 microsecond on/off RF pulse
+  * single trigger pulse at the start of every 10 microsecond period
+
+###### First the Clock
+
+In this example, channel ('C') is programmed to act as the clock. The
+pulser system clock period is set to the smallest allowed value in order to
+set our clock tick leading edge period to 200 ns.
+This channel is programmed exactly as the simple case above with a smaller width.
+
+```python
+clock_period = 200e-9
+channel = pulser.channel('C')
+channel.mode('normal')
+channel.width(np.round(clock_period/2, 8)) #100 ns wide square wave
+channel.delay(0)
+```
+
+###### Add RF switch
+
+A 5 microsecond wide pulse (positive), followed by
+5 microseconds off on channel B. This is implemented by using the duty-cycle mode.
+In the duty-cycle mode, we specify the number of `clock_periods` ON we wish for the
+channel to generate a signal we describe. We then specify how many `clock_periods`
+OFF until the pattern repeats. In this case channel B is programmed to output
+a 5 microsecond wide pulse ONE time and then wait the appropriate number of
+`clock_periods` such that the start of the next 5 microsecond wide pulse occurs
+10 microseconds later. Thus, the OFF duty cycle will be `10 mu*s / clock_period  - 1`
+
+
+```python
+rf_pulse_width = 5e-6
+full_cycle_width = 2 * rf_pulse_width
+n_on_cycles = 1
+n_off_cycles = np.round(full_cycle_width/clock_period).astype(int) - n_on_cycles
+channel = pulser.channel('B')
+channel.mode('dcycle')
+channel.width(np.round(rf_pulse_width, 8)) #5 mu*s wide square wave
+channel.delay(0)
+channel.pcounter(n_on_cycles)
+channel.ocounter(n_off_cycles)
+```
+
+###### Add Trigger
+
+We now want to produce a single square wave output on channel D at the beginning of
+each 10 microsecond period. This will be used to trigger our DAQ. Again, we
+use the duty cycle mode.
+
+```python
+trigger_width = 100e-9
+n_on_cycles = 1
+n_off_cycles = np.round(full_cycle_width/clock_period).astype(int) - n_on_cycles
+channel = pulser.channel('D')
+channel.mode('dcycle')
+channel.width(np.round(trigger_width, 8)) #100 ns wide square wave
+channel.delay(0)
+channel.pcounter(n_on_cycles)
+channel.ocounter(n_off_cycles)
+```
+
+###### Set the Channel States
+
+We finally set the states of the channels and system to start the sequence.
+
+```python
+pulser.channel('B').state(1)
+pulser.channel('C').state(1)
+pulser.channel('D').state(1)
+pulser.system.state(1)
 ```
 
 #### Trigger Pulses on Channel A via Software Trigger
 
+Here's an example of using an external trigger to generate an output pulse from
+the QCSapphire. This may be very useful when used in combination with a
+device that has more output channels and more sophisticated pulse sequeunce
+programming, such as the Spin Core Pulse Blaster. One of the Pulse Blaster's
+output channels could be used to trigger the external trigger channel of the QCSapphire.
+
+One reason to do this would be to utilize QCSapphire's superior pulse width
+resolution. The smallest square wave from the Pulse Blaster is 50 ns, while
+the QCSapphire can produce a 10 ns wide pulse (according to its documentation)
+
 ```python
-my_pulser.pulse0.mode('single')
-my_pulser.pulse0.period(0.2) #200 ms system pulse
-my_pulser.pulse0.external.mode('trigger')
-my_pulser.pulse1.cmode('single')
-my_pulser.pulse1.polarity('normal')
-my_pulser.pulse1.width(0.05) #50 ms wide pulse
-my_pulser.pulse1.state(0)
-my_pulser.pulse0.state(0)
+
+### TODO -- check this code! It doesn't look right.
+pulser.channel('A').mode('single')
+#pulser.channel('A').cmode('single') #do we need cmode instead of mode?
+
+pulser.channel('A').period(0.2) #200 ms system pulse
+pulser.channel('A').external.mode('trigger')
+pulser.channel('A').width(10e-9) #10 ns wide pulse
+
+#pulser.channel('B').cmode('single')
+#pulser.channel('B').polarity('normal')
+#pulser.channel('B').width(10e-9) #10 ns wide pulse
+#pulser.channel('B').state(0)
+pulser.channel('A').state(0)
 
 
 #trigger loop example
@@ -186,16 +327,16 @@ wait_N = 5.0
 N_pulses = 50
 
 #activate pulser and output channel
-my_pulser.pulse0.state(1)
-my_pulser.pulse1.state(1)
+pulser.channel('A').state(1)
+#pulser.channel('B').state(1)
 
 for i in range(N_pulses):
-    my_pulser.software_trigger() #trigger the pulser
+    pulser.software_trigger() #trigger the pulser
     time.sleep(wait_N)
 
 #deactivate
-my_pulser.pulse0.state(0)
-my_pulser.pulse1.state(0)
+pulser.channel('A').state(0)
+#pulser.channel('B').state(0)
 ```
 
 
@@ -206,15 +347,15 @@ the last string written to the Serial port is found in the
 `.last_write_command` attribute of the pulser object.
 
 ```python
-my_pulser.pulse1.width(25e-6)
-print(my_pulser.last_write_command)
+pulser.channle('B').width(25e-6)
+print(pulser.last_write_command)
 # ':PULSE1:WIDTH 2.5e-05'
 ```
 
 Additionally, you can see the recent command history of the object (last 1000 commands)
 
 ```python
-for command in my_pulser.command_history():
+for command in pulser.command_history():
   print(command)
 ```
 

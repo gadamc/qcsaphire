@@ -262,6 +262,10 @@ channel.pcounter(n_on_cycles)
 channel.ocounter(n_off_cycles)
 ```
 
+When data are acquired, the first 5 microseconds will be the 'signal' where
+we expect a dip in PL, and the second 5 microseconds will be the 'background'
+where no RF signal is present and we expect full PL intensity.
+
 ###### Add Trigger
 
 We now want to produce a single square wave output on channel D at the beginning of
@@ -290,6 +294,20 @@ pulser.channel('C').state(1)
 pulser.channel('D').state(1)
 pulser.system.state(1)
 ```
+
+#### Rabi Oscillation Programming
+
+In a Rabi oscillation experiment, one varies the width of the RF signal and compares
+measures the change in PL. This example is more complicated than the example
+above. A channel is used to control the optical pumping as well (channel A).
+The sequence is an optical pump signal (5 microseconds), followed by an RF
+signal of some duration, tau, followed by an optical readout / pump (5 microseconds),
+followed by some period with no RF or optical pump. An example, though done
+with a lock-in amplifier, is found [here](https://aapt.scitation.org/doi/full/10.1119/10.0001905).
+
+The code to produce this sequence is used in the [QT3 lab experimental code](https://github.com/gadamc/qt3-utils/blob/b03050d86c5116a21986278734817be39df2da8a/src/qt3utils/experiments/rabi.py#L164).
+
+
 
 #### Trigger Pulses on Channel A via Software Trigger
 

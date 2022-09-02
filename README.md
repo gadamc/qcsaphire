@@ -145,7 +145,7 @@ for channel in range(1,5):
 
 ### Examples
 
-The following examples demonstrate both simple and advanced usage. 
+The following examples demonstrate both simple and advanced usage.
 
 #### Resets
 
@@ -176,8 +176,7 @@ to acquire photo luminescence (PL) signal for periods when no RF signal is appli
 in order to measure a background, and to then measure PL when the RF is applied.
 
 In this case, we wish to program the QCSapphire to output a TTL signal of fixed
-duration and period. The following example shows how to program the QCSapphire
-to output a 5 microsecond on/off TTL signal.
+duration and period. The following example shows how to generate a 5 microsecond on/off TTL signal.
 
 ##### Simple Example: Single Channel
 

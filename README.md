@@ -145,13 +145,7 @@ for channel in range(1,5):
 
 ### Examples
 
-After reading the documentation for the device, you'll notice there
-are four output channels (A, B, C and D) and an internal global system.
-
-The internal global system is referenced as `:PULSE0` (or `pulser.pulse0`).
-To the output channels are references as (A = `pulse1`, B = `pulse2'`, C = `pulse3`,
-and D = `pulse4`).
-
+The following examples demonstrate both simple and advanced usage. 
 
 #### Resets
 

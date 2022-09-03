@@ -234,7 +234,7 @@ channel.delay(0)
 ###### Add RF switch
 
 A 5 microsecond wide pulse (positive), followed by
-5 microseconds off on channel B. This is implemented by using the duty-cycle mode.
+5 microseconds off on channel B is implemented using the duty-cycle mode.
 In the duty-cycle mode, we specify the number of `clock_periods` ON we wish for the
 channel to generate a signal we describe. We then specify how many `clock_periods`
 OFF until the pattern repeats. In this case channel B is programmed to output
@@ -245,7 +245,7 @@ a 5 microsecond wide pulse ONE time and then wait the appropriate number of
 
 ```python
 rf_pulse_width = 5e-6
-full_cycle_width = 2 * rf_pulse_width
+full_pulse_sequence_period = 2 * rf_pulse_width
 n_on_cycles = 1
 n_off_cycles = np.round(full_cycle_width/clock_period).astype(int) - n_on_cycles
 channel = pulser.channel('B')
@@ -269,7 +269,7 @@ use the duty cycle mode.
 ```python
 trigger_width = 100e-9
 n_on_cycles = 1
-n_off_cycles = np.round(full_cycle_width/clock_period).astype(int) - n_on_cycles
+n_off_cycles = np.round(full_pulse_sequence_period/clock_period).astype(int) - n_on_cycles
 channel = pulser.channel('D')
 channel.mode('dcycle')
 channel.width(np.round(trigger_width, 8)) #100 ns wide square wave
@@ -289,18 +289,31 @@ pulser.channel('D').state(1)
 pulser.system.state(1)
 ```
 
-#### Rabi Oscillation Programming
+#### Rabi Oscillation / pulsed-ODRM Programming
 
-In a Rabi oscillation experiment, one varies the width of the RF signal and compares
-measures the change in PL. This example is more complicated than the example
-above. A channel is used to control the optical pumping as well (channel A).
-The sequence is an optical pump signal (5 microseconds), followed by an RF
-signal of some duration, tau, followed by an optical readout / pump (5 microseconds),
-followed by some period with no RF or optical pump. An example, though done
+In pulsed-ODMR, one separates the optical pumping from the application of
+the RF magnetic field signal. In a Rabi oscillation experiment, the
+width of the RF signal is varied as the PL contrast to background is measured.
+Both of these pulse sequences are similar to each other and both are more complicated than the example
+above.
+
+The main difference between the CWODMR pulses above and Rabi/pulse-ODMR sequences is
+that an appropriate delay to RF pulse is added and channel A is used to
+control the optical pump/readout. The RF pulse must come after the initial optical pump.
+
+The full sequence is an optical pump signal (~5 microseconds), followed by an RF
+signal of some duration, followed by an optical readout (~5 microseconds),
+followed by some period with no RF or optical pump. A description of this sequence, though done
 with a lock-in amplifier, is found [here](https://aapt.scitation.org/doi/full/10.1119/10.0001905).
 
-The code to produce this sequence is used in the [QT3 lab experimental code](https://github.com/gadamc/qt3-utils/blob/b03050d86c5116a21986278734817be39df2da8a/src/qt3utils/experiments/rabi.py#L164).
+However, the duty-cycle mode is used. The RF channel (B) is programmed to generate
+a delayed signal, of some width, ONE time, and then wait M clock cycles before
+the next signal, where M = `full_pulse_sequence_period / clock_period - 1`.
 
+An example of this sequence is found in the [QT3 lab experimental code](https://github.com/gadamc/qt3-utils/blob/b03050d86c5116a21986278734817be39df2da8a/src/qt3utils/experiments/rabi.py#L164).
+
+Additionally, as can be seen in the code above, some extra delay after the optical
+pump was added because of a finite hardware response time of ~700-900 ns.
 
 
 #### Trigger Pulses on Channel A via Software Trigger

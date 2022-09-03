@@ -224,6 +224,7 @@ This channel is programmed exactly as the simple case above with a smaller width
 
 ```python
 clock_period = 200e-9
+pulser.system.period(clock_period)
 channel = pulser.channel('C')
 channel.mode('normal')
 channel.width(np.round(clock_period/2, 8)) #100 ns wide square wave

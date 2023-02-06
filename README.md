@@ -8,9 +8,7 @@ This code facilitates connections to the device, communication, error handling a
 ## Installation
 
 ```
-git clone https://github.com/gadamc/qcsapphire
-cd qcsapphire
-python setup.py install
+pip install qcsapphire
 ```
 
 ## Usage

@@ -6,7 +6,6 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qcsapphire"
-dynamic = ["version"] # version is dynamically set by setuptools_scm
 
 description = "A package for communicating with the Quantum Composer Sapphire 9200 TTL pulse generator."
 readme = "README.md"
@@ -54,5 +53,3 @@ dependencies = [
 "Bug Tracker" = "https://github.com/qt3uw/qcsapphire/issues"
 "Changelog" = "https://github.com/qt3uw/qcsapphire/releases"
 
-[tool.setuptools.dynamic]
-version = {attr = "qcsapphire.__version__"}

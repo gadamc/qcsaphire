@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qcsapphire"
-dynamic = ["version"] # version is defined in __init__.py
+dynamic = ["version"] # version is dynamically set by setuptools_scm
 
 description = "A package for communicating with the Quantum Composer Sapphire 9200 TTL pulse generator."
 readme = "README.md"

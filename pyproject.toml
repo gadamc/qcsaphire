@@ -1,11 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
-
-[tool.setuptools_scm]
 
 [project]
 name = "qcsapphire"
+version = "1.0.1.dev3"
 
 description = "A package for communicating with the Quantum Composer Sapphire 9200 TTL pulse generator."
 readme = "README.md"
